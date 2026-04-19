@@ -8,6 +8,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 private val Context.dataStore by preferencesDataStore(name = "sobiyojung_prefs")
@@ -32,13 +33,15 @@ object Prefs {
         context.dataStore.edit { it.remove(INVITE_CODE) }
     }
 
+    private val listSerializer = ListSerializer(StoreSummary.serializer())
+
     suspend fun saveStoreCache(context: Context, stores: List<StoreSummary>) {
-        val payload = json.encodeToString(stores)
+        val payload = json.encodeToString(listSerializer, stores)
         context.dataStore.edit { it[STORE_CACHE] = payload }
     }
 
     suspend fun getStoreCache(context: Context): List<StoreSummary> {
         val raw = context.dataStore.data.map { it[STORE_CACHE] }.first() ?: return emptyList()
-        return runCatching { json.decodeFromString<List<StoreSummary>>(raw) }.getOrDefault(emptyList())
+        return runCatching { json.decodeFromString(listSerializer, raw) }.getOrDefault(emptyList())
     }
 }
