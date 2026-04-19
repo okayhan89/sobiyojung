@@ -7,12 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.Image
-import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -21,7 +18,6 @@ import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
-import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -95,7 +91,10 @@ private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
                 ),
                 modifier = GlanceModifier
                     .defaultWeight()
-                    .clickable(actionStartActivity<MainActivity>()),
+                    .clickable(actionStartActivity(
+                        Intent(context, MainActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )),
             )
             Text(
                 text = "↻",
@@ -106,7 +105,10 @@ private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
                 ),
                 modifier = GlanceModifier
                     .padding(horizontal = 6.dp)
-                    .clickable(actionStartActivity<MainActivity>()),
+                    .clickable(actionStartActivity(
+                        Intent(context, MainActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )),
             )
         }
 
@@ -151,6 +153,7 @@ private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
 
 @Composable
 private fun EmptyMessage(text: String) {
+    val context = LocalContext.current
     Box(
         modifier = GlanceModifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -161,7 +164,12 @@ private fun EmptyMessage(text: String) {
                 color = ColorProvider(Color(0xFFA8949C)),
                 fontSize = 12.sp,
             ),
-            modifier = GlanceModifier.clickable(actionStartActivity<MainActivity>()),
+            modifier = GlanceModifier.clickable(
+                actionStartActivity(
+                    Intent(context, MainActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                ),
+            ),
         )
     }
 }
