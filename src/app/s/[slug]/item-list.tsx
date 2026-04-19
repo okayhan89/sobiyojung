@@ -15,9 +15,15 @@ interface ItemListProps {
   storeId: string;
   accent: string;
   initialItems: Item[];
+  initialSuggestions: string[];
 }
 
-export function ItemList({ storeId, accent, initialItems }: ItemListProps) {
+export function ItemList({
+  storeId,
+  accent,
+  initialItems,
+  initialSuggestions,
+}: ItemListProps) {
   const [items, setItems] = useState<Item[]>(initialItems);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +56,27 @@ export function ItemList({ storeId, accent, initialItems }: ItemListProps) {
   }, [storeId]);
 
   const { open, done } = useMemo(() => split(items), [items]);
+
+  // Merge server-fetched household history with current session's items,
+  // dedupe, and cap. Session items come first (most relevant).
+  const suggestions = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const item of items) {
+      const t = item.text.trim();
+      if (!t || seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+    }
+    for (const t of initialSuggestions) {
+      if (!t || seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+    }
+    return out.slice(0, 80);
+  }, [items, initialSuggestions]);
+
+  const datalistId = `suggestions-${storeId}`;
 
   function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -155,8 +182,18 @@ export function ItemList({ storeId, accent, initialItems }: ItemListProps) {
             onChange={(e) => setText(e.target.value)}
             placeholder="예: 딸기 2팩"
             maxLength={80}
+            list={datalistId}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-[#2a1a24] outline-none placeholder:text-[#c4b5bc]"
           />
+          <datalist id={datalistId}>
+            {suggestions.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
           <button
             type="submit"
             aria-label="추가"
