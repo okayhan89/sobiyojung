@@ -2,10 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type { Item } from "@/lib/types";
 
 interface ActionResult {
   success: boolean;
   error?: string;
+}
+
+interface AddItemResult extends ActionResult {
+  item?: Item;
 }
 
 const MAX_TEXT_LENGTH = 200;
@@ -13,7 +18,7 @@ const MAX_TEXT_LENGTH = 200;
 export async function addItemAction(input: {
   storeId: string;
   text: string;
-}): Promise<ActionResult> {
+}): Promise<AddItemResult> {
   const text = input.text.trim();
   if (!text) {
     return { success: false, error: "내용을 적어주세요." };
@@ -31,18 +36,22 @@ export async function addItemAction(input: {
     return { success: false, error: "로그인이 필요해요." };
   }
 
-  const { error } = await supabase.from("items").insert({
-    store_id: input.storeId,
-    text,
-    created_by: user.id,
-  });
+  const { data, error } = await supabase
+    .from("items")
+    .insert({
+      store_id: input.storeId,
+      text,
+      created_by: user.id,
+    })
+    .select()
+    .single();
 
-  if (error) {
-    return { success: false, error: error.message };
+  if (error || !data) {
+    return { success: false, error: error?.message ?? "추가 실패" };
   }
 
   revalidatePath("/");
-  return { success: true };
+  return { success: true, item: data as Item };
 }
 
 export async function toggleItemAction(input: {

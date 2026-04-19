@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { SUPABASE_SCHEMA } from "@/lib/supabase/schema";
 import type { Item } from "@/lib/types";
 import {
   addItemAction,
@@ -31,7 +32,7 @@ export function ItemList({ storeId, accent, initialItems }: ItemListProps) {
         "postgres_changes",
         {
           event: "*",
-          schema: "public",
+          schema: SUPABASE_SCHEMA,
           table: "items",
           filter: `store_id=eq.${storeId}`,
         },
@@ -75,11 +76,27 @@ export function ItemList({ storeId, accent, initialItems }: ItemListProps) {
       if (!result.success) {
         setItems((prev) => prev.filter((i) => i.id !== tempId));
         setError(result.error ?? "추가 실패");
+        return;
+      }
+      // Replace optimistic temp row with the server-confirmed row so later
+      // toggles hit the real UUID (not a non-existent temp id).
+      if (result.item) {
+        const real = result.item;
+        setItems((prev) => {
+          if (prev.some((i) => i.id === real.id)) {
+            return prev.filter((i) => i.id !== tempId);
+          }
+          return prev.map((i) => (i.id === tempId ? real : i));
+        });
       }
     });
   }
 
   function handleToggle(item: Item) {
+    // Don't toggle an optimistic row whose server write hasn't completed yet —
+    // the update would target a non-existent uuid and silently no-op.
+    if (item.id.startsWith("temp-")) return;
+
     const nextChecked = !item.checked;
     const checkedAt = nextChecked ? new Date().toISOString() : null;
 
@@ -113,6 +130,8 @@ export function ItemList({ storeId, accent, initialItems }: ItemListProps) {
   }
 
   function handleDelete(item: Item) {
+    if (item.id.startsWith("temp-")) return;
+
     setItems((prev) => prev.filter((i) => i.id !== item.id));
 
     startTransition(async () => {
@@ -318,7 +337,18 @@ function applyRealtimeChange(prev: Item[], payload: RealtimePayload): Item[] {
   if (payload.eventType === "INSERT") {
     const next = payload.new as Item;
     if (prev.some((i) => i.id === next.id)) return prev;
-    return [next, ...prev];
+    // Replace any optimistic temp row with the server-confirmed one
+    // (matched by same text + store, within temp id prefix) to prevent
+    // duplicates and to let subsequent toggles hit the real row.
+    const deduped = prev.filter(
+      (i) =>
+        !(
+          i.id.startsWith("temp-") &&
+          i.text === next.text &&
+          i.store_id === next.store_id
+        ),
+    );
+    return [next, ...deduped];
   }
   if (payload.eventType === "UPDATE") {
     const next = payload.new as Item;
