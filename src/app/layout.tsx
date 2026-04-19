@@ -1,6 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import {
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  SITE_SHORT_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,23 +20,57 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "소비요정의 쇼핑구매희망리스트",
-    template: "%s · 소비요정",
+    default: SITE_NAME,
+    template: `%s · ${SITE_SHORT_NAME}`,
   },
-  description: "이번 주에 어디서 뭘 살지 적어두는 공유 메모장",
-  applicationName: "소비요정",
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_SHORT_NAME,
+  keywords: SITE_KEYWORDS,
+  authors: [{ name: "okayhan89" }],
+  creator: "okayhan89",
+  publisher: "ggogom",
+  category: "lifestyle",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "소비요정",
+    title: SITE_SHORT_NAME,
   },
   formatDetection: {
     telephone: false,
+    email: false,
+    address: false,
   },
   icons: {
     icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/icons/icon.svg", type: "image/svg+xml" }],
+  },
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
