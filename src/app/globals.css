@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: #fef7f9;
+  --color-bg-soft: #fbe9ef;
+  --color-surface: #ffffff;
+  --color-ink: #2a1a24;
+  --color-ink-soft: #6a5560;
+  --color-muted: #a8949c;
+  --color-line: #f0dde4;
+  --color-accent: #e85a9a;
+  --color-accent-soft: #ffd5e3;
+  --color-accent-ink: #8a1b52;
+  --color-check: #9aa08f;
+
+  --shadow-card:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 1px 2px rgba(138, 27, 82, 0.06),
+    0 8px 24px -12px rgba(138, 27, 82, 0.14);
+  --shadow-lift:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 2px 4px rgba(138, 27, 82, 0.08),
+    0 16px 40px -16px rgba(138, 27, 82, 0.22);
+
+  --radius-card: 20px;
+  --radius-pill: 999px;
+
+  --duration-fast: 140ms;
+  --duration-normal: 260ms;
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-ink);
+  --color-surface: var(--color-surface);
+  --color-accent: var(--color-accent);
+  --color-accent-soft: var(--color-accent-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(
+      120% 80% at 0% 0%,
+      var(--color-bg-soft) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      80% 60% at 100% 100%,
+      #fff2d6 0%,
+      transparent 55%
+    ),
+    var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* iOS safe area padding helper */
+.safe-bottom {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+.safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top));
 }
