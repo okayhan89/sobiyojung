@@ -78,8 +78,7 @@ export function ItemList({
 
   const datalistId = `suggestions-${storeId}`;
 
-  function handleAdd(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  function submitAdd() {
     const value = text.trim();
     if (!value) return;
 
@@ -98,8 +97,9 @@ export function ItemList({
     setError(null);
     inputRef.current?.focus();
 
+    const finalText = value;
     startTransition(async () => {
-      const result = await addItemAction({ storeId, text: value });
+      const result = await addItemAction({ storeId, text: finalText });
       if (!result.success) {
         setItems((prev) => prev.filter((i) => i.id !== tempId));
         setError(result.error ?? "추가 실패");
@@ -117,6 +117,21 @@ export function ItemList({
         });
       }
     });
+  }
+
+  function handleAdd(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    submitAdd();
+  }
+
+  function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    // Don't fire submit while Korean IME is mid-composition, and guard against
+    // buggy platforms where Enter doesn't trigger native form submit (some
+    // iOS builds with datalist).
+    if (e.key !== "Enter") return;
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+    e.preventDefault();
+    submitAdd();
   }
 
   function handleToggle(item: Item) {
@@ -180,9 +195,11 @@ export function ItemList({
             ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleInputKeyDown}
             placeholder="예: 딸기 2팩"
             maxLength={80}
             list={datalistId}
+            enterKeyHint="done"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"

@@ -14,13 +14,14 @@ const withSerwist = withSerwistInit({
 const nextConfig: NextConfig = {
   reactCompiler: true,
 
-  // Router cache: keep dynamic pages warm for 30s, static for 5min.
-  // Back/forward + same-session re-visits feel instant; realtime corrects
-  // anything stale that leaked through.
+  // Router cache: keep dynamic pages warm for 5min, static for 10min.
+  // Back/forward + same-session re-visits feel instant; realtime + revalidate
+  // corrects anything stale that leaked through. Matches a typical shopping
+  // browsing session (open store → tweak list → back to dashboard → next store).
   experimental: {
     staleTimes: {
-      dynamic: 30,
-      static: 300,
+      dynamic: 300,
+      static: 600,
     },
     // View Transitions API — native-feeling page transitions in Chrome/Safari 18+.
     // Unsupported browsers degrade to no animation (no breakage).
