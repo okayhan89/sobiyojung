@@ -5,6 +5,7 @@ import type { Store, StoreWithCounts } from "@/lib/types";
 import { AddStoreButton } from "./_components/add-store-button";
 import { InviteBadge } from "./_components/invite-badge";
 import { SignOutButton } from "./_components/signout-button";
+import { StoreTilePending } from "./_components/store-tile-pending";
 
 export const dynamic = "force-dynamic";
 
@@ -100,8 +101,9 @@ function StoreTile({ store }: { store: StoreWithCounts }) {
     <li>
       <Link
         href={`/s/${store.slug}`}
-        className="group relative flex aspect-[5/6] flex-col justify-between overflow-hidden rounded-[22px] border border-[#f0dde4] bg-white p-4 shadow-[var(--shadow-card)] transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)] active:translate-y-[1px]"
+        className="group relative flex aspect-[5/6] flex-col justify-between overflow-hidden rounded-[22px] border border-[#f0dde4] bg-white p-4 shadow-[var(--shadow-card)] transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)] active:scale-[0.97] active:shadow-none"
       >
+        <StoreTilePending />
         <span
           aria-hidden
           className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-60 blur-2xl transition group-hover:opacity-90"

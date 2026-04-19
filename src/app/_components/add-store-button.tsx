@@ -74,9 +74,9 @@ export function AddStoreButton({ householdId }: { householdId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1 rounded-full border border-[#f0dde4] bg-white/80 px-3 py-1.5 text-xs font-medium text-[#8a1b52] transition hover:bg-white"
+        className="flex h-10 items-center gap-1 rounded-full border border-[#f0dde4] bg-white/80 px-4 text-[13px] font-medium text-[#8a1b52] transition hover:bg-white active:scale-95 active:bg-[#fef7f9]"
       >
-        <Plus size={13} />
+        <Plus size={14} />
         스토어 추가
       </button>
 

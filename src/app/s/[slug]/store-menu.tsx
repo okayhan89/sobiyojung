@@ -39,9 +39,9 @@ export function StoreMenu({ storeId, storeName, itemCount }: StoreMenuProps) {
           onClick={() => setMenuOpen((v) => !v)}
           aria-label="스토어 메뉴"
           aria-expanded={menuOpen}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#2a1a24] backdrop-blur transition hover:bg-white"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/50 bg-white/60 text-[#2a1a24] backdrop-blur transition hover:bg-white active:scale-95 active:bg-white"
         >
-          <MoreVertical size={16} />
+          <MoreVertical size={18} />
         </button>
 
         {menuOpen ? (
@@ -62,9 +62,9 @@ export function StoreMenu({ storeId, storeName, itemCount }: StoreMenuProps) {
                   setMenuOpen(false);
                   setConfirmOpen(true);
                 }}
-                className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] text-[#e5484d] transition hover:bg-[#fef7f9]"
+                className="flex w-full items-center gap-2 px-4 py-4 text-left text-[14px] text-[#e5484d] transition hover:bg-[#fef7f9] active:bg-[#fdeaef]"
               >
-                <Trash2 size={14} />
+                <Trash2 size={16} />
                 스토어 삭제
               </button>
             </div>

@@ -63,9 +63,9 @@ export default async function StorePage({ params }: PageProps) {
         <div className="flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-1 rounded-full border border-white/50 bg-white/60 px-3 py-1.5 text-xs font-medium text-[#2a1a24] backdrop-blur transition hover:bg-white"
+            className="inline-flex h-10 items-center gap-1 rounded-full border border-white/50 bg-white/60 px-4 text-[13px] font-medium text-[#2a1a24] backdrop-blur transition hover:bg-white active:scale-95 active:bg-white"
           >
-            <ArrowLeft size={13} />
+            <ArrowLeft size={14} />
             전체
           </Link>
           <StoreMenu
