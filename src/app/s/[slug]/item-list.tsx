@@ -141,11 +141,11 @@ export function ItemList({ storeId, accent, initialItems }: ItemListProps) {
           <button
             type="submit"
             aria-label="추가"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white shadow-[0_8px_18px_-6px_rgba(232,90,154,0.55)] transition active:translate-y-[1px] disabled:opacity-50"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-[0_8px_18px_-6px_rgba(232,90,154,0.55)] transition active:translate-y-[1px] active:scale-95 disabled:opacity-50"
             style={{ background: accent }}
             disabled={text.trim().length === 0}
           >
-            <Plus size={18} />
+            <Plus size={20} />
           </button>
         </div>
         {error ? (
@@ -238,7 +238,7 @@ function ItemRow({
 }) {
   return (
     <li
-      className={`group flex items-center gap-3 rounded-2xl border border-[#f0dde4] bg-white px-3 py-3 transition ${
+      className={`flex items-center gap-1 rounded-2xl border border-[#f0dde4] bg-white pl-1 pr-1 py-1 transition ${
         item.checked ? "opacity-60" : "shadow-[var(--shadow-card)]"
       }`}
     >
@@ -247,30 +247,34 @@ function ItemRow({
         onClick={() => onToggle(item)}
         aria-pressed={item.checked}
         aria-label={item.checked ? "되돌리기" : "완료"}
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition"
-        style={{
-          borderColor: item.checked ? accent : "#d9c7cf",
-          background: item.checked ? accent : "transparent",
-        }}
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition active:scale-95 active:bg-[#fef7f9]"
       >
-        {item.checked ? (
-          <svg
-            aria-hidden
-            viewBox="0 0 12 12"
-            className="h-3 w-3 text-white"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M2 6.2 L5 9 L10 3.4" />
-          </svg>
-        ) : null}
+        <span
+          className="flex h-6 w-6 items-center justify-center rounded-full border-2 transition"
+          style={{
+            borderColor: item.checked ? accent : "#d9c7cf",
+            background: item.checked ? accent : "transparent",
+          }}
+        >
+          {item.checked ? (
+            <svg
+              aria-hidden
+              viewBox="0 0 12 12"
+              className="h-3 w-3 text-white"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2 6.2 L5 9 L10 3.4" />
+            </svg>
+          ) : null}
+        </span>
       </button>
 
       <span
-        className={`flex-1 text-[15px] ${
+        className={`flex-1 py-2 text-[15px] ${
           item.checked
             ? "text-[#a8949c] line-through decoration-[#d9c7cf]"
             : "text-[#2a1a24]"
@@ -283,9 +287,9 @@ function ItemRow({
         type="button"
         onClick={() => onDelete(item)}
         aria-label="삭제"
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#c4b5bc] opacity-0 transition group-hover:opacity-100 hover:bg-[#fef7f9] hover:text-[#e5484d] group-active:opacity-100"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#c4b5bc] transition hover:bg-[#fef7f9] hover:text-[#e5484d] active:scale-95 active:bg-[#fdeaef] active:text-[#e5484d]"
       >
-        <Trash2 size={14} />
+        <Trash2 size={16} />
       </button>
     </li>
   );
