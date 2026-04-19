@@ -42,33 +42,26 @@ export default async function StorePage({ params }: PageProps) {
 
   const store = storeData as Store;
 
-  const [itemsRes, recentRes] = await Promise.all([
+  const [itemsRes, suggestionsRes] = await Promise.all([
     supabase
       .from("items")
       .select("*")
       .eq("store_id", store.id)
       .order("checked", { ascending: true })
       .order("created_at", { ascending: false }),
-    // Household-wide recent item texts for the autocomplete datalist.
-    // RLS already scopes this to the user's household.
-    supabase
-      .from("items")
-      .select("text, created_at")
-      .order("created_at", { ascending: false })
-      .limit(300),
+    // RPC returns distinct item texts across the user's household,
+    // ordered by most recent usage. Scales regardless of how many
+    // duplicate rows exist.
+    supabase.rpc("item_suggestions", { p_limit: 500 }),
   ]);
 
   const initialItems = (itemsRes.data ?? []) as Item[];
   const accent = store.color ?? "#e85a9a";
 
-  const seenText = new Set<string>();
   const suggestions: string[] = [];
-  for (const row of (recentRes.data ?? []) as { text: string }[]) {
-    const t = row.text.trim();
-    if (!t || seenText.has(t)) continue;
-    seenText.add(t);
-    suggestions.push(t);
-    if (suggestions.length >= 80) break;
+  for (const row of (suggestionsRes.data ?? []) as string[]) {
+    const t = (row ?? "").trim();
+    if (t) suggestions.push(t);
   }
 
   return (
