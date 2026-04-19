@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">소비요정</string>
+    <string name="widget_label">소비요정 쇼핑리스트</string>
+    <string name="widget_description">스토어별 쇼핑리스트를 홈 화면에서 보여주는 위젯</string>
+
+    <string name="onboarding_title">소비요정 위젯</string>
+    <string name="onboarding_subtitle">웹앱에서 표시되는 초대 코드를 입력하면 홈 화면에 위젯으로 쇼핑리스트를 띄울 수 있어요.</string>
+    <string name="invite_code_hint">초대 코드 (예: 68FBAE)</string>
+    <string name="save_code">저장하기</string>
+    <string name="saved_code">저장됐어요. 홈 화면 길게 눌러 위젯 추가.</string>
+    <string name="invalid_code">코드를 다시 확인해 주세요.</string>
+    <string name="open_web">웹앱 열기</string>
+    <string name="refresh_now">지금 새로고침</string>
+
+    <string name="widget_empty">초대 코드를 앱에서 먼저 등록해 주세요</string>
+    <string name="widget_loading">불러오는 중…</string>
+    <string name="widget_count_zero">비어있음</string>
+    <string name="widget_count_some">%1$d개 고민중</string>
+</resources>

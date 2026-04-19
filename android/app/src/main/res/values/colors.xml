@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_pink">#E85A9A</color>
+    <color name="brand_pink_soft">#FFD5E3</color>
+    <color name="brand_bg">#FEF7F9</color>
+    <color name="brand_ink">#2A1A24</color>
+    <color name="brand_ink_soft">#6A5560</color>
+    <color name="brand_muted">#A8949C</color>
+    <color name="brand_line">#F0DDE4</color>
+</resources>

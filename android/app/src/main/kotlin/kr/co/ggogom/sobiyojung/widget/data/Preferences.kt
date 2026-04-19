@@ -1,0 +1,44 @@
+package kr.co.ggogom.sobiyojung.widget.data
+
+import android.content.Context
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.Json
+
+private val Context.dataStore by preferencesDataStore(name = "sobiyojung_prefs")
+
+object Prefs {
+    private val INVITE_CODE: Preferences.Key<String> = stringPreferencesKey("invite_code")
+    private val STORE_CACHE: Preferences.Key<String> = stringPreferencesKey("store_cache_json")
+
+    private val json = Json { ignoreUnknownKeys = true }
+
+    fun inviteCodeFlow(context: Context): Flow<String?> =
+        context.dataStore.data.map { it[INVITE_CODE]?.takeIf(String::isNotBlank) }
+
+    suspend fun getInviteCode(context: Context): String? =
+        context.dataStore.data.map { it[INVITE_CODE] }.first()?.takeIf(String::isNotBlank)
+
+    suspend fun saveInviteCode(context: Context, code: String) {
+        context.dataStore.edit { it[INVITE_CODE] = code.trim().uppercase() }
+    }
+
+    suspend fun clearInviteCode(context: Context) {
+        context.dataStore.edit { it.remove(INVITE_CODE) }
+    }
+
+    suspend fun saveStoreCache(context: Context, stores: List<StoreSummary>) {
+        val payload = json.encodeToString(stores)
+        context.dataStore.edit { it[STORE_CACHE] = payload }
+    }
+
+    suspend fun getStoreCache(context: Context): List<StoreSummary> {
+        val raw = context.dataStore.data.map { it[STORE_CACHE] }.first() ?: return emptyList()
+        return runCatching { json.decodeFromString<List<StoreSummary>>(raw) }.getOrDefault(emptyList())
+    }
+}
