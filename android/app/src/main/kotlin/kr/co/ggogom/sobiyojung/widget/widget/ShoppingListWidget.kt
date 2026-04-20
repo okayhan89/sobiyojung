@@ -2,7 +2,6 @@ package kr.co.ggogom.sobiyojung.widget.widget
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -11,6 +10,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.LocalContext
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
@@ -70,15 +70,19 @@ class ShoppingListWidget : GlanceAppWidget() {
 
 private const val BG_COLOR = 0xFFFEF7F9.toInt()
 private const val ITEM_LIMIT = 3
-private const val STALE_THRESHOLD_MS = 2 * 60 * 1000L
+private const val STALE_THRESHOLD_MS = 30 * 1000L
 
 @Composable
 private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
     val context = LocalContext.current
-    val openApp = actionStartActivity(
+    val openSetup = actionStartActivity(
         Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
     )
+    val openWeb = actionRunCallback<OpenAndRefreshAction>(
+        actionParametersOf(OpenAndRefreshAction.urlKey to BuildConfig.SITE_URL),
+    )
+    val headerAction = if (hasInviteCode) openWeb else openSetup
     val refresh = actionRunCallback<RefreshAction>()
 
     Column(
@@ -101,7 +105,7 @@ private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                 ),
-                modifier = GlanceModifier.defaultWeight().clickable(openApp),
+                modifier = GlanceModifier.defaultWeight().clickable(headerAction),
             )
             Text(
                 text = "↻",
@@ -121,13 +125,13 @@ private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
                 text = context.getString(
                     kr.co.ggogom.sobiyojung.widget.R.string.widget_empty,
                 ),
-                onClick = openApp,
+                onClick = headerAction,
             )
             return@Column
         }
 
         if (stores.isEmpty()) {
-            EmptyMessage(text = "불러오는 중…", onClick = openApp)
+            EmptyMessage(text = "불러오는 중…", onClick = headerAction)
             return@Column
         }
 
@@ -157,9 +161,10 @@ private fun EmptyMessage(text: String, onClick: androidx.glance.action.Action) {
 @Composable
 private fun StoreBlock(store: StoreSummary) {
     val accent = parseHexColor(store.color) ?: Color(0xFFE85A9A)
-    val openAction = actionStartActivity(
-        Intent(Intent.ACTION_VIEW, Uri.parse("${BuildConfig.SITE_URL}/s/${store.slug}"))
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    val openAction = actionRunCallback<OpenAndRefreshAction>(
+        actionParametersOf(
+            OpenAndRefreshAction.urlKey to "${BuildConfig.SITE_URL}/s/${store.slug}",
+        ),
     )
 
     val previewItems = store.open_items.take(ITEM_LIMIT)
