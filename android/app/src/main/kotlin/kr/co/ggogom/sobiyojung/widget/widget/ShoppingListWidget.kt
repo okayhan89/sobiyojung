@@ -122,19 +122,25 @@ private fun WidgetUI(
                     color = ColorProvider(Color(0xFFA8949C)),
                     fontSize = 9.sp,
                 ),
-                modifier = GlanceModifier.padding(end = 6.dp),
+                modifier = GlanceModifier.padding(end = 4.dp),
             )
-            Text(
-                text = "↻",
-                style = TextStyle(
-                    color = ColorProvider(Color(0xFFA8949C)),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
+            Box(
                 modifier = GlanceModifier
-                    .padding(horizontal = 4.dp)
+                    .size(32.dp)
+                    .cornerRadius(16.dp)
+                    .background(Color(0xFFFFFFFF))
                     .clickable(refresh),
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "↻",
+                    style = TextStyle(
+                        color = ColorProvider(Color(0xFF8A1B52)),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+            }
         }
 
         if (!hasInviteCode) {
