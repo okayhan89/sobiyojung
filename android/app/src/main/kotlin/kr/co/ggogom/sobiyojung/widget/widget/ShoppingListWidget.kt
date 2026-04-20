@@ -14,6 +14,7 @@ import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -49,10 +50,14 @@ class ShoppingListWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val inviteCode = Prefs.getInviteCode(context)
         val cached = Prefs.getStoreCache(context)
+        val lastFetchAt = Prefs.getLastFetchAt(context)
+        val now = System.currentTimeMillis()
+        val stale = lastFetchAt == null || (now - lastFetchAt) > STALE_THRESHOLD_MS
+
         val stores = when {
             inviteCode == null -> emptyList()
-            cached.isNotEmpty() -> cached
-            else -> StoreRepository(context).refresh()
+            cached.isEmpty() || stale -> StoreRepository(context).refresh()
+            else -> cached
         }
 
         provideContent {
@@ -65,6 +70,7 @@ class ShoppingListWidget : GlanceAppWidget() {
 
 private const val BG_COLOR = 0xFFFEF7F9.toInt()
 private const val ITEM_LIMIT = 3
+private const val STALE_THRESHOLD_MS = 2 * 60 * 1000L
 
 @Composable
 private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
@@ -73,6 +79,7 @@ private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
         Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
     )
+    val refresh = actionRunCallback<RefreshAction>()
 
     Column(
         modifier = GlanceModifier
@@ -105,7 +112,7 @@ private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
                 ),
                 modifier = GlanceModifier
                     .padding(horizontal = 4.dp)
-                    .clickable(openApp),
+                    .clickable(refresh),
             )
         }
 
