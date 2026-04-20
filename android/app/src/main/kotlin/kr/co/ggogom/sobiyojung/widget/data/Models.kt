@@ -11,4 +11,5 @@ data class StoreSummary(
     val color: String? = null,
     val sort_order: Int = 0,
     val open_count: Long = 0L,
+    val open_items: List<String> = emptyList(),
 )

@@ -23,7 +23,6 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -53,7 +52,7 @@ class ShoppingListWidget : GlanceAppWidget() {
         val stores = when {
             inviteCode == null -> emptyList()
             cached.isNotEmpty() -> cached
-            else -> StoreRepository(context).refresh() // cold start: block once
+            else -> StoreRepository(context).refresh()
         }
 
         provideContent {
@@ -65,149 +64,146 @@ class ShoppingListWidget : GlanceAppWidget() {
 }
 
 private const val BG_COLOR = 0xFFFEF7F9.toInt()
-private const val TILE_BORDER_COLOR = 0x1F8A1B52.toInt()
+private const val ITEM_LIMIT = 3
 
 @Composable
 private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
     val context = LocalContext.current
+    val openApp = actionStartActivity(
+        Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(Color(BG_COLOR))
-            .cornerRadius(20.dp)
-            .padding(10.dp),
+            .cornerRadius(18.dp)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
     ) {
         Row(
-            modifier = GlanceModifier.fillMaxWidth(),
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .padding(bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "🧚‍♀️  소비요정",
+                text = "🧚‍♀️ 소비요정",
                 style = TextStyle(
                     color = ColorProvider(Color(0xFF2A1A24)),
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                 ),
-                modifier = GlanceModifier
-                    .defaultWeight()
-                    .clickable(actionStartActivity(
-                        Intent(context, MainActivity::class.java)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                    )),
+                modifier = GlanceModifier.defaultWeight().clickable(openApp),
             )
             Text(
                 text = "↻",
                 style = TextStyle(
                     color = ColorProvider(Color(0xFFA8949C)),
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                 ),
                 modifier = GlanceModifier
-                    .padding(horizontal = 6.dp)
-                    .clickable(actionStartActivity(
-                        Intent(context, MainActivity::class.java)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                    )),
+                    .padding(horizontal = 4.dp)
+                    .clickable(openApp),
             )
         }
-
-        Spacer(modifier = GlanceModifier.height(8.dp))
 
         if (!hasInviteCode) {
             EmptyMessage(
                 text = context.getString(
-                    kr.co.ggogom.sobiyojung.widget.R.string.widget_empty
+                    kr.co.ggogom.sobiyojung.widget.R.string.widget_empty,
                 ),
+                onClick = openApp,
             )
             return@Column
         }
 
         if (stores.isEmpty()) {
-            EmptyMessage(text = "불러오는 중…")
+            EmptyMessage(text = "불러오는 중…", onClick = openApp)
             return@Column
         }
 
-        val rows = stores.chunked(2)
-        rows.forEachIndexed { index, pair ->
-            if (index > 0) Spacer(modifier = GlanceModifier.height(6.dp))
-            Row(modifier = GlanceModifier.fillMaxWidth()) {
-                StoreTile(
-                    store = pair[0],
-                    modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
-                )
-                if (pair.size > 1) {
-                    Spacer(modifier = GlanceModifier.width(6.dp))
-                    StoreTile(
-                        store = pair[1],
-                        modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
-                    )
-                } else {
-                    // keep grid width even when odd count
-                    Spacer(modifier = GlanceModifier.defaultWeight())
-                }
-            }
+        stores.forEachIndexed { index, store ->
+            if (index > 0) Spacer(modifier = GlanceModifier.height(4.dp))
+            StoreBlock(store = store)
         }
     }
 }
 
 @Composable
-private fun EmptyMessage(text: String) {
-    val context = LocalContext.current
+private fun EmptyMessage(text: String, onClick: androidx.glance.action.Action) {
     Box(
-        modifier = GlanceModifier.fillMaxSize(),
+        modifier = GlanceModifier.fillMaxSize().clickable(onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
             style = TextStyle(
                 color = ColorProvider(Color(0xFFA8949C)),
-                fontSize = 12.sp,
-            ),
-            modifier = GlanceModifier.clickable(
-                actionStartActivity(
-                    Intent(context, MainActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                ),
+                fontSize = 11.sp,
             ),
         )
     }
 }
 
 @Composable
-private fun StoreTile(store: StoreSummary, modifier: GlanceModifier = GlanceModifier) {
+private fun StoreBlock(store: StoreSummary) {
     val accent = parseHexColor(store.color) ?: Color(0xFFE85A9A)
     val openAction = actionStartActivity(
         Intent(Intent.ACTION_VIEW, Uri.parse("${BuildConfig.SITE_URL}/s/${store.slug}"))
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
     )
 
+    val previewItems = store.open_items.take(ITEM_LIMIT)
+    val overflow = (store.open_count - previewItems.size).coerceAtLeast(0L)
+    val itemsText = when {
+        store.open_count == 0L -> "비어있음"
+        previewItems.isEmpty() -> "${store.open_count}개 있음"
+        overflow > 0L ->
+            previewItems.joinToString("\n") { "· $it" } + "\n+ ${overflow}개 더"
+        else -> previewItems.joinToString("\n") { "· $it" }
+    }
+
     Box(
-        modifier = modifier
-            .cornerRadius(14.dp)
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .cornerRadius(12.dp)
             .background(Color.White)
-            .padding(10.dp)
+            .padding(horizontal = 9.dp, vertical = 7.dp)
             .clickable(openAction),
     ) {
-        Column(modifier = GlanceModifier.fillMaxSize()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = GlanceModifier.fillMaxWidth()) {
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Box(
                     modifier = GlanceModifier
-                        .size(28.dp)
-                        .cornerRadius(8.dp)
+                        .size(22.dp)
+                        .cornerRadius(7.dp)
                         .background(accent.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = store.icon ?: "🛒",
-                        style = TextStyle(fontSize = 15.sp),
+                        style = TextStyle(fontSize = 12.sp),
                     )
                 }
                 Spacer(modifier = GlanceModifier.width(6.dp))
-                if (store.open_count > 0) {
+                Text(
+                    text = store.name,
+                    style = TextStyle(
+                        color = ColorProvider(Color(0xFF2A1A24)),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    modifier = GlanceModifier.defaultWeight(),
+                )
+                if (store.open_count > 0L) {
                     Box(
                         modifier = GlanceModifier
-                            .cornerRadius(10.dp)
+                            .cornerRadius(9.dp)
                             .background(accent)
                             .padding(horizontal = 6.dp, vertical = 1.dp),
                     ) {
@@ -215,28 +211,23 @@ private fun StoreTile(store: StoreSummary, modifier: GlanceModifier = GlanceModi
                             text = store.open_count.toString(),
                             style = TextStyle(
                                 color = ColorProvider(Color.White),
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                             ),
                         )
                     }
                 }
             }
-            Spacer(modifier = GlanceModifier.defaultWeight())
+            Spacer(modifier = GlanceModifier.height(3.dp))
             Text(
-                text = store.name,
+                text = itemsText,
                 style = TextStyle(
-                    color = ColorProvider(Color(0xFF2A1A24)),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
+                    color = ColorProvider(
+                        if (store.open_count == 0L) Color(0xFFA8949C) else Color(0xFF6A5560),
+                    ),
+                    fontSize = 11.sp,
                 ),
-            )
-            Text(
-                text = if (store.open_count > 0) "${store.open_count}개 고민중" else "비어있음",
-                style = TextStyle(
-                    color = ColorProvider(Color(0xFFA8949C)),
-                    fontSize = 10.sp,
-                ),
+                maxLines = ITEM_LIMIT + 1,
             )
         }
     }
