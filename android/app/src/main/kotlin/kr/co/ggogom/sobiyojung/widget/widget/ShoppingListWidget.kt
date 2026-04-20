@@ -59,10 +59,15 @@ class ShoppingListWidget : GlanceAppWidget() {
             cached.isEmpty() || stale -> StoreRepository(context).refresh()
             else -> cached
         }
+        val effectiveLastFetch = Prefs.getLastFetchAt(context)
 
         provideContent {
             GlanceTheme {
-                WidgetUI(stores = stores, hasInviteCode = inviteCode != null)
+                WidgetUI(
+                    stores = stores,
+                    hasInviteCode = inviteCode != null,
+                    lastFetchAt = effectiveLastFetch,
+                )
             }
         }
     }
@@ -73,7 +78,11 @@ private const val ITEM_LIMIT = 3
 private const val STALE_THRESHOLD_MS = 30 * 1000L
 
 @Composable
-private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
+private fun WidgetUI(
+    stores: List<StoreSummary>,
+    hasInviteCode: Boolean,
+    lastFetchAt: Long?,
+) {
     val context = LocalContext.current
     val openSetup = actionStartActivity(
         Intent(context, MainActivity::class.java)
@@ -106,6 +115,14 @@ private fun WidgetUI(stores: List<StoreSummary>, hasInviteCode: Boolean) {
                     fontWeight = FontWeight.Bold,
                 ),
                 modifier = GlanceModifier.defaultWeight().clickable(headerAction),
+            )
+            Text(
+                text = formatLastFetch(lastFetchAt),
+                style = TextStyle(
+                    color = ColorProvider(Color(0xFFA8949C)),
+                    fontSize = 9.sp,
+                ),
+                modifier = GlanceModifier.padding(end = 6.dp),
             )
             Text(
                 text = "↻",
@@ -242,6 +259,18 @@ private fun StoreBlock(store: StoreSummary) {
                 maxLines = ITEM_LIMIT + 1,
             )
         }
+    }
+}
+
+private fun formatLastFetch(lastFetchAt: Long?): String {
+    if (lastFetchAt == null) return ""
+    val diffSec = (System.currentTimeMillis() - lastFetchAt) / 1000L
+    return when {
+        diffSec < 10 -> "방금"
+        diffSec < 60 -> "${diffSec}초 전"
+        diffSec < 3600 -> "${diffSec / 60}분 전"
+        diffSec < 86_400 -> "${diffSec / 3600}시간 전"
+        else -> "${diffSec / 86_400}일 전"
     }
 }
 
