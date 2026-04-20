@@ -66,4 +66,17 @@ object Prefs {
 
     suspend fun getLastFetchAt(context: Context): Long? =
         context.dataStore.data.map { it[LAST_FETCH_AT] }.first()
+
+    /**
+     * Stamp "refresh just tapped" BEFORE the network call returns so the UI
+     * can immediately show "방금", giving the user visual confirmation that
+     * the ↻ tap was received. `saveStoreCache` will overwrite this on network
+     * success; on failure we keep the stamp so repeated taps still feel
+     * responsive.
+     */
+    suspend fun markRefreshAttempt(context: Context) {
+        context.dataStore.edit {
+            it[LAST_FETCH_AT] = System.currentTimeMillis()
+        }
+    }
 }

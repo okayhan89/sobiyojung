@@ -36,11 +36,13 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import kr.co.ggogom.sobiyojung.widget.BuildConfig
 import kr.co.ggogom.sobiyojung.widget.MainActivity
 import kr.co.ggogom.sobiyojung.widget.data.Prefs
-import kr.co.ggogom.sobiyojung.widget.data.StoreRepository
 import kr.co.ggogom.sobiyojung.widget.data.StoreSummary
+import kr.co.ggogom.sobiyojung.widget.sync.RefreshWorker
 
 class ShoppingListWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Exact
@@ -48,25 +50,34 @@ class ShoppingListWidget : GlanceAppWidget() {
         PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        // Render cached state immediately — NEVER block composition on the
+        // network. Blocking here holds the GlanceSessionManager lock for the
+        // duration of the HTTP call, and an in-flight ActionCallback tap
+        // (e.g. ↻) that also needs the lock to `updateAll` can end up waiting
+        // past the broadcast receiver's goAsync budget and silently no-op.
         val inviteCode = Prefs.getInviteCode(context)
         val cached = Prefs.getStoreCache(context)
         val lastFetchAt = Prefs.getLastFetchAt(context)
         val now = System.currentTimeMillis()
         val stale = lastFetchAt == null || (now - lastFetchAt) > STALE_THRESHOLD_MS
 
-        val stores = when {
-            inviteCode == null -> emptyList()
-            cached.isEmpty() || stale -> StoreRepository(context).refresh()
-            else -> cached
+        // If the cache is cold/stale, enqueue a background refresh via
+        // WorkManager. When it finishes, RefreshWorker calls updateAll() and
+        // we re-enter provideGlance with fresh data.
+        if (inviteCode != null && (cached.isEmpty() || stale)) {
+            runCatching {
+                WorkManager.getInstance(context.applicationContext).enqueue(
+                    OneTimeWorkRequestBuilder<RefreshWorker>().build(),
+                )
+            }
         }
-        val effectiveLastFetch = Prefs.getLastFetchAt(context)
 
         provideContent {
             GlanceTheme {
                 WidgetUI(
-                    stores = stores,
+                    stores = cached,
                     hasInviteCode = inviteCode != null,
-                    lastFetchAt = effectiveLastFetch,
+                    lastFetchAt = lastFetchAt,
                 )
             }
         }
