@@ -28,11 +28,25 @@ object Prefs {
         context.dataStore.data.map { it[INVITE_CODE] }.first()?.takeIf(String::isNotBlank)
 
     suspend fun saveInviteCode(context: Context, code: String) {
-        context.dataStore.edit { it[INVITE_CODE] = code.trim().uppercase() }
+        val normalized = code.trim().uppercase()
+        context.dataStore.edit { prefs ->
+            val previous = prefs[INVITE_CODE]
+            prefs[INVITE_CODE] = normalized
+            // If the invite code actually changed, drop the cached stores from the
+            // old household so the widget never renders the previous data.
+            if (previous != normalized) {
+                prefs.remove(STORE_CACHE)
+                prefs.remove(LAST_FETCH_AT)
+            }
+        }
     }
 
     suspend fun clearInviteCode(context: Context) {
-        context.dataStore.edit { it.remove(INVITE_CODE) }
+        context.dataStore.edit {
+            it.remove(INVITE_CODE)
+            it.remove(STORE_CACHE)
+            it.remove(LAST_FETCH_AT)
+        }
     }
 
     private val listSerializer = ListSerializer(StoreSummary.serializer())
