@@ -32,6 +32,9 @@ export function DashboardStores({
   suggestions,
 }: DashboardStoresProps) {
   const [items, setItems] = useState<Item[]>(initialItems);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(
+    stores[0]?.id ?? null,
+  );
 
   useEffect(() => {
     const supabase = createClient();
@@ -45,7 +48,9 @@ export function DashboardStores({
           table: "items",
         },
         (payload) => {
-          setItems((prev) => applyRealtimeChange(prev, payload as unknown as RealtimePayload));
+          setItems((prev) =>
+            applyRealtimeChange(prev, payload as unknown as RealtimePayload),
+          );
         },
       )
       .subscribe();
@@ -79,14 +84,23 @@ export function DashboardStores({
     );
   }
 
+  const selectedStore =
+    stores.find((s) => s.id === selectedStoreId) ?? stores[0];
+
   return (
     <div className="flex flex-col gap-3">
+      <UnifiedAddBar
+        stores={stores}
+        selectedStore={selectedStore}
+        onSelectStore={setSelectedStoreId}
+        suggestions={suggestions}
+        onAddLocal={setItems}
+      />
       {stores.map((store) => (
         <StoreCard
           key={store.id}
           store={store}
           allItems={itemsByStore.get(store.id) ?? []}
-          suggestions={suggestions}
           onLocalChange={setItems}
         />
       ))}
@@ -94,23 +108,22 @@ export function DashboardStores({
   );
 }
 
-interface StoreCardProps {
-  store: Store;
-  allItems: Item[];
+interface UnifiedAddBarProps {
+  stores: Store[];
+  selectedStore: Store;
+  onSelectStore: (id: string) => void;
   suggestions: string[];
-  onLocalChange: React.Dispatch<React.SetStateAction<Item[]>>;
+  onAddLocal: React.Dispatch<React.SetStateAction<Item[]>>;
 }
 
-function StoreCard({
-  store,
-  allItems,
+function UnifiedAddBar({
+  stores,
+  selectedStore,
+  onSelectStore,
   suggestions,
-  onLocalChange,
-}: StoreCardProps) {
-  const accent = store.color ?? "#e85a9a";
-  const openItems = allItems.filter((i) => !i.checked);
-  const openCount = openItems.length;
-
+  onAddLocal,
+}: UnifiedAddBarProps) {
+  const accent = selectedStore.color ?? "#e85a9a";
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -120,32 +133,33 @@ function StoreCard({
     const value = text.trim();
     if (!value) return;
 
+    const storeId = selectedStore.id;
     const tempId = `temp-${crypto.randomUUID()}`;
     const optimistic: Item = {
       id: tempId,
-      store_id: store.id,
+      store_id: storeId,
       text: value,
       checked: false,
       created_by: null,
       created_at: new Date().toISOString(),
       checked_at: null,
     };
-    onLocalChange((prev) => [optimistic, ...prev]);
+    onAddLocal((prev) => [optimistic, ...prev]);
     setText("");
     setError(null);
     inputRef.current?.focus();
 
     const finalText = value;
     startTransition(async () => {
-      const result = await addItemAction({ storeId: store.id, text: finalText });
+      const result = await addItemAction({ storeId, text: finalText });
       if (!result.success) {
-        onLocalChange((prev) => prev.filter((i) => i.id !== tempId));
+        onAddLocal((prev) => prev.filter((i) => i.id !== tempId));
         setError(result.error ?? "추가 실패");
         return;
       }
       if (result.item) {
         const real = result.item;
-        onLocalChange((prev) => {
+        onAddLocal((prev) => {
           if (prev.some((i) => i.id === real.id)) {
             return prev.filter((i) => i.id !== tempId);
           }
@@ -166,6 +180,99 @@ function StoreCard({
     e.preventDefault();
     submitAdd();
   }
+
+  return (
+    <section
+      className="rounded-[22px] border border-[#f0dde4] p-3 shadow-[var(--shadow-card)]"
+      style={{
+        background: `linear-gradient(180deg, ${accent}14 0%, #ffffff 70%)`,
+      }}
+    >
+      <div
+        className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2.5"
+        role="tablist"
+        aria-label="스토어 선택"
+      >
+        {stores.map((store) => {
+          const isSelected = store.id === selectedStore.id;
+          const storeAccent = store.color ?? "#e85a9a";
+          return (
+            <button
+              key={store.id}
+              type="button"
+              role="tab"
+              onClick={() => onSelectStore(store.id)}
+              aria-pressed={isSelected}
+              aria-selected={isSelected}
+              className="flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition active:scale-95"
+              style={{
+                borderColor: isSelected ? storeAccent : "#f0dde4",
+                background: isSelected ? `${storeAccent}22` : "#ffffff",
+                color: "#2a1a24",
+              }}
+            >
+              <span className="text-[15px]" aria-hidden>
+                {store.icon ?? "🛒"}
+              </span>
+              <span>{store.name}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="flex items-center gap-2 rounded-2xl border border-[#f0dde4] bg-white/95 p-1.5 pl-3 shadow-sm">
+          <input
+            ref={inputRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={`${selectedStore.name}에 추가...`}
+            maxLength={80}
+            list="dash-unified-suggestions"
+            enterKeyHint="done"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            className="min-w-0 flex-1 bg-transparent py-1.5 text-[14px] text-[#2a1a24] outline-none placeholder:text-[#c4b5bc]"
+          />
+          <datalist id="dash-unified-suggestions">
+            {suggestions.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+          <button
+            type="submit"
+            aria-label={`${selectedStore.name}에 추가`}
+            disabled={text.trim().length === 0}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition active:translate-y-[1px] active:scale-95 disabled:opacity-50"
+            style={{ background: accent }}
+          >
+            <Plus size={18} />
+          </button>
+        </div>
+        {error ? (
+          <p role="alert" className="mt-1.5 px-2 text-[11px] text-[#e5484d]">
+            {error}
+          </p>
+        ) : null}
+      </form>
+    </section>
+  );
+}
+
+interface StoreCardProps {
+  store: Store;
+  allItems: Item[];
+  onLocalChange: React.Dispatch<React.SetStateAction<Item[]>>;
+}
+
+function StoreCard({ store, allItems, onLocalChange }: StoreCardProps) {
+  const accent = store.color ?? "#e85a9a";
+  const openItems = allItems.filter((i) => !i.checked);
+  const openCount = openItems.length;
+  const [, startTransition] = useTransition();
 
   function handleToggle(item: Item) {
     if (item.id.startsWith("temp-")) return;
@@ -208,8 +315,6 @@ function StoreCard({
     });
   }
 
-  const datalistId = `dash-suggestions-${store.id}`;
-
   return (
     <section
       className="relative overflow-hidden rounded-[22px] border border-[#f0dde4] bg-white shadow-[var(--shadow-card)]"
@@ -248,45 +353,6 @@ function StoreCard({
           className="shrink-0 text-[#c4b5bc] transition group-hover:text-[#8a1b52]"
         />
       </Link>
-
-      <form onSubmit={handleSubmit} className="px-3 pb-3">
-        <div className="flex items-center gap-2 rounded-2xl border border-[#f0dde4] bg-white/90 p-1.5 pl-3 shadow-sm">
-          <input
-            ref={inputRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={`${store.name}에 추가...`}
-            maxLength={80}
-            list={datalistId}
-            enterKeyHint="done"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            className="min-w-0 flex-1 bg-transparent py-1.5 text-[14px] text-[#2a1a24] outline-none placeholder:text-[#c4b5bc]"
-          />
-          <datalist id={datalistId}>
-            {suggestions.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
-          <button
-            type="submit"
-            aria-label={`${store.name}에 추가`}
-            disabled={text.trim().length === 0}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition active:translate-y-[1px] active:scale-95 disabled:opacity-50"
-            style={{ background: accent }}
-          >
-            <Plus size={18} />
-          </button>
-        </div>
-        {error ? (
-          <p role="alert" className="mt-1.5 px-2 text-[11px] text-[#e5484d]">
-            {error}
-          </p>
-        ) : null}
-      </form>
 
       {allItems.length > 0 ? (
         <ul className="flex flex-col border-t border-[#f0dde4]/60 bg-white/70">
