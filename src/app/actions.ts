@@ -16,15 +16,17 @@ interface ActionResult {
 }
 
 function slugify(name: string): string {
-  const base = name
-    .trim()
+  // ASCII-only slug. Korean characters in URLs cause encoding edge cases that
+  // can break navigation (e.g., /s/이마트-abc1 decoding mismatch). The display
+  // name is stored separately in the DB; the slug only needs to be unique
+  // and URL-safe.
+  const ascii = name
     .toLowerCase()
-    .replace(/[^a-z0-9가-힣]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 20);
   const random = Math.random().toString(36).slice(2, 6);
-  const safe = base || "store";
-  return `${safe}-${random}`;
+  return ascii ? `${ascii}-${random}` : `store-${random}`;
 }
 
 export async function addStoreAction(
