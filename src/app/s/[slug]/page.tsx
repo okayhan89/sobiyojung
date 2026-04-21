@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireHousehold } from "@/lib/household";
-import type { Item, Store } from "@/lib/types";
+import type { Store } from "@/lib/types";
 import { ItemList } from "./item-list";
 import { StoreMenu } from "./store-menu";
 
@@ -25,44 +24,32 @@ export const dynamic = "force-dynamic";
 
 export default async function StorePage({ params }: PageProps) {
   const { slug } = await params;
-  const { household } = await requireHousehold();
-
   const supabase = await createClient();
 
-  const { data: storeData } = await supabase
+  // One round-trip only. We rely on:
+  //   - proxy.ts already validated the session (redirects unauth'd to /login)
+  //   - RLS on `stores` filters to rows in households the caller is a member of
+  // So calling auth.getUser() and querying household_members here is redundant.
+  // Items + suggestions are loaded client-side from localStorage cache.
+  const { data: storeData, error } = await supabase
     .from("stores")
     .select("*")
-    .eq("household_id", household.id)
     .eq("slug", slug)
     .maybeSingle();
+
+  // Auth cookie was valid at proxy time but got rejected by Postgres (e.g. it
+  // expired mid-flight or the user lost access). Bounce to login so the next
+  // visit re-auths instead of looping on a dead page.
+  if (error?.code === "PGRST301" || error?.code === "42501") {
+    redirect("/login");
+  }
 
   if (!storeData) {
     notFound();
   }
 
   const store = storeData as Store;
-
-  const [itemsRes, suggestionsRes] = await Promise.all([
-    supabase
-      .from("items")
-      .select("*")
-      .eq("store_id", store.id)
-      .order("checked", { ascending: true })
-      .order("created_at", { ascending: false }),
-    // RPC returns distinct item texts across the user's household,
-    // ordered by most recent usage. Scales regardless of how many
-    // duplicate rows exist.
-    supabase.rpc("item_suggestions", { p_limit: 500 }),
-  ]);
-
-  const initialItems = (itemsRes.data ?? []) as Item[];
   const accent = store.color ?? "#e85a9a";
-
-  const suggestions: string[] = [];
-  for (const row of (suggestionsRes.data ?? []) as string[]) {
-    const t = (row ?? "").trim();
-    if (t) suggestions.push(t);
-  }
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
@@ -83,7 +70,6 @@ export default async function StorePage({ params }: PageProps) {
           <StoreMenu
             storeId={store.id}
             storeName={store.name}
-            itemCount={initialItems.length}
           />
         </div>
 
@@ -109,8 +95,8 @@ export default async function StorePage({ params }: PageProps) {
         <ItemList
           storeId={store.id}
           accent={accent}
-          initialItems={initialItems}
-          initialSuggestions={suggestions}
+          initialItems={[]}
+          initialSuggestions={[]}
         />
       </main>
     </div>

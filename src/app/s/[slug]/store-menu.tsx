@@ -8,10 +8,9 @@ import { deleteStoreAction } from "./actions";
 interface StoreMenuProps {
   storeId: string;
   storeName: string;
-  itemCount: number;
 }
 
-export function StoreMenu({ storeId, storeName, itemCount }: StoreMenuProps) {
+export function StoreMenu({ storeId, storeName }: StoreMenuProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -93,9 +92,7 @@ export function StoreMenu({ storeId, storeName, itemCount }: StoreMenuProps) {
                   {storeName} 스토어를 삭제할까요?
                 </h3>
                 <p className="mt-1 text-[13px] leading-5 text-[#6a5560]">
-                  {itemCount > 0
-                    ? `안에 있는 ${itemCount}개 항목과 기록도 모두 함께 지워져요. 복구할 수 없어요.`
-                    : "되돌릴 수 없어요."}
+                  안에 있는 항목과 기록도 모두 함께 지워져요. 복구할 수 없어요.
                 </p>
               </div>
               <button

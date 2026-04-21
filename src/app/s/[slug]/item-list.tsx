@@ -6,6 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { SUPABASE_SCHEMA } from "@/lib/supabase/schema";
 import type { Item } from "@/lib/types";
 import {
+  readCachedItems,
+  readCachedSuggestions,
+  writeCachedItems,
+  writeCachedSuggestions,
+} from "@/lib/item-cache";
+import {
   addItemAction,
   deleteItemAction,
   toggleItemAction,
@@ -24,11 +30,75 @@ export function ItemList({
   initialItems,
   initialSuggestions,
 }: ItemListProps) {
-  const [items, setItems] = useState<Item[]>(initialItems);
+  // Prefer server data when it's present (fresh SSR). Fall back to localStorage
+  // on cold widget taps where the server round-trip is still in flight and
+  // initialItems is empty (see page.tsx — we no longer SSR items by default).
+  const [items, setItems] = useState<Item[]>(() => {
+    if (initialItems.length > 0) return initialItems;
+    if (typeof window === "undefined") return initialItems;
+    const cached = readCachedItems(storeId);
+    return cached ?? initialItems;
+  });
+  const [suggestions, setServerSuggestions] = useState<string[]>(() => {
+    if (initialSuggestions.length > 0) return initialSuggestions;
+    if (typeof window === "undefined") return initialSuggestions;
+    return readCachedSuggestions() ?? initialSuggestions;
+  });
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [, startTransition] = useTransition();
+
+  // Persist server-confirmed state to cache so the next cold launch paints
+  // instantly. Optimistic temp rows are filtered inside writeCachedItems.
+  useEffect(() => {
+    writeCachedItems(storeId, items);
+  }, [storeId, items]);
+
+  useEffect(() => {
+    if (suggestions.length > 0) writeCachedSuggestions(suggestions);
+  }, [suggestions]);
+
+  // Revalidate on mount: even if we painted from cache, pull fresh items so a
+  // second device's changes land quickly before the realtime channel opens.
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    (async () => {
+      const { data } = await supabase
+        .from("items")
+        .select("*")
+        .eq("store_id", storeId)
+        .order("checked", { ascending: true })
+        .order("created_at", { ascending: false });
+      if (cancelled || !data) return;
+      const fresh = data as Item[];
+      setItems((prev) => mergeWithOptimistic(prev, fresh));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId]);
+
+  // Suggestions are nice-to-have (datalist autocomplete). Load them after
+  // the first paint so they don't block the critical path.
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    (async () => {
+      const { data } = await supabase.rpc("item_suggestions", { p_limit: 500 });
+      if (cancelled || !data) return;
+      const list: string[] = [];
+      for (const row of data as string[]) {
+        const t = (row ?? "").trim();
+        if (t) list.push(t);
+      }
+      setServerSuggestions(list);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -57,9 +127,9 @@ export function ItemList({
 
   const { open, done } = useMemo(() => split(items), [items]);
 
-  // Merge server-fetched household history with current session's items,
+  // Merge household history (server or cached) with current session's items,
   // dedupe, and cap. Session items come first (most relevant).
-  const suggestions = useMemo(() => {
+  const mergedSuggestions = useMemo(() => {
     const seen = new Set<string>();
     const out: string[] = [];
     for (const item of items) {
@@ -68,13 +138,13 @@ export function ItemList({
       seen.add(t);
       out.push(t);
     }
-    for (const t of initialSuggestions) {
+    for (const t of suggestions) {
       if (!t || seen.has(t)) continue;
       seen.add(t);
       out.push(t);
     }
     return out.slice(0, 80);
-  }, [items, initialSuggestions]);
+  }, [items, suggestions]);
 
   const datalistId = `suggestions-${storeId}`;
 
@@ -207,7 +277,7 @@ export function ItemList({
             className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-[#2a1a24] outline-none placeholder:text-[#c4b5bc]"
           />
           <datalist id={datalistId}>
-            {suggestions.map((s) => (
+            {mergedSuggestions.map((s) => (
               <option key={s} value={s} />
             ))}
           </datalist>
@@ -366,6 +436,20 @@ function ItemRow({
       </button>
     </li>
   );
+}
+
+// Merge fresh server rows with any optimistic temp rows still pending write,
+// so a mid-flight add doesn't flicker away during revalidation.
+function mergeWithOptimistic(prev: Item[], fresh: Item[]): Item[] {
+  const freshByText = new Set(
+    fresh.map((i) => `${i.store_id}:${i.text}`),
+  );
+  const pending = prev.filter(
+    (i) =>
+      i.id.startsWith("temp-") &&
+      !freshByText.has(`${i.store_id}:${i.text}`),
+  );
+  return [...pending, ...fresh];
 }
 
 function split(items: Item[]): { open: Item[]; done: Item[] } {
